@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #FFFFFF;
+    --foreground: #212121;
+    --card: #FFFFFF;
+    --card-foreground: #212121;
+    --popover: #FFFFFF;
+    --popover-foreground: #212121;
+    --primary: #29335C;
+    --primary-foreground: #FFFFFF;
+    --secondary: #636363;
+    --secondary-foreground: #FFFFFF;
+    --muted: #E3E3E3;
+    --muted-foreground: #757575;
+    --accent: #E3E3E3;
+    --accent-foreground: #757575;
+    --destructive: #BC1637;
+    --destructive-foreground: #FFFFFF;
+    --border: #CDCDCD;
+    --input: #CDCDCD;
+    --ring: #29335C;
+    --radius: 4px;
+    --chart-1: #57A40F;
+    --chart-2: #5BBFE3;
+    --chart-3: #E5C302;
+    --chart-4: #BC1637;
+    --chart-5: #29335C;
+    --error: #BC1637;
+    --error2: #FEF7F5;
+    --error3: #6D0738;
+    --info: #5BBFE3;
+    --info2: #F2FDFF;
+    --info3: #C8F3FA;
+    --primary2: #636363;
+    --primary3: #898989;
+    --primary4: #CDCDCD;
+    --primary5: #E3E3E3;
+    --primary6: #F8F8F8;
+    --primary6_1: #FCFCFC;
+    --success: #57A40F;
+    --success2: #F9FFE9;
+    --success3: #2F6E06;
+    --text: #212121;
+    --text2: #757575;
+    --text3: #BDBDBD;
+    --warning: #E5C302;
+    --warning2: #FDF9CB;
+    --warning3: #846A00;
+    --boxShadow: 1px 1px 2px 0 rgba(0, 0, 0, 0.12);
+    --boxShadow2: 2px 2px 4px 0 rgba(0, 0, 0, 0.12);
+    --boxShadow3: 4px 4px 8px 0 rgba(0, 0, 0, 0.12);
+  }
+
+  .dark {
+    --background: #212121;
+    --foreground: #FFFFFF;
+    --card: #212121;
+    --card-foreground: #FFFFFF;
+    --popover: #212121;
+    --popover-foreground: #FFFFFF;
+    --primary: #FFFFFF;
+    --primary-foreground: #29335C;
+    --secondary: #757575;
+    --secondary-foreground: #FFFFFF;
+    --muted: #757575;
+    --muted-foreground: #BDBDBD;
+    --accent: #757575;
+    --accent-foreground: #FFFFFF;
+    --destructive: #6D0738;
+    --destructive-foreground: #FFFFFF;
+    --border: #757575;
+    --input: #757575;
+    --ring: #FFFFFF;
+    --chart-1: #2F6E06;
+    --chart-2: #C8F3FA;
+    --chart-3: #846A00;
+    --chart-4: #6D0738;
+    --chart-5: #29335C;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
