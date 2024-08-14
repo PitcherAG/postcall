@@ -13,20 +13,10 @@ export default defineConfig((config) => {
     },
     base: mode === 'production' ? '' : '/' + appJson.name,
     resolve: {
-      alias:
-        mode === 'development'
-          ? {
-              '@pitcher/canvas-ui': new URL(
-                '../../../web/packages/libs/canvas-ui/dist',
-                import.meta.url,
-              ).pathname,
-
-              '@': path.resolve(__dirname, './src'),
-            }
-          : {
-              '@': path.resolve(__dirname, './src'),
-            },
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
     },
     plugins: [react()],
-  } as any
+  }
 })
