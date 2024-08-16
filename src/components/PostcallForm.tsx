@@ -4,6 +4,7 @@ import * as z from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
+import { usePitcher } from '@/components/providers/PitcherProvider'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -14,7 +15,6 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form'
-import { usePitcher } from './PitcherProvider'
 import { StarRating } from '@/components/ui/star-rating'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
 import { Input } from '@/components/ui/input'
