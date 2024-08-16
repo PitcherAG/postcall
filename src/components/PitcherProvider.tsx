@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+} from 'react'
 import {
   usePitcherApi as getApi,
   useUi as getUiApi,
@@ -10,8 +16,8 @@ import {
 interface PitcherContextType {
   api: ReturnType<typeof getApi>
   uiApi: ReturnType<typeof getUiApi>
-  actionId: string
   env: PitcherEnv | null
+  endpoint: string | null
 }
 
 export const PitcherContext = createContext<PitcherContextType | undefined>(
@@ -30,12 +36,14 @@ export const usePitcher = () => {
 export const PitcherProvider: React.FC<React.PropsWithChildren> = ({
   children,
 }) => {
-  const api = getApi()
-  const uiApi = getUiApi()
-  const [actionId, setActionId] = useState('')
+  const apiRef = useRef(getApi())
+  const uiApiRef = useRef(getUiApi())
   const [env, setEnv] = useState<PitcherEnv | null>(null)
+  const [endpoint, setEndpoint] = useState<string | null>(null)
 
   useEffect(() => {
+    const api = apiRef.current
+    const uiApi = uiApiRef.current
     const handleMeetingCanceled = async (p: UiMeetingCanceledPayload) => {
       console.log('Meeting canceled', p)
       uiApi.completePostcall({ was_successfully_submitted: false })
@@ -44,8 +52,8 @@ export const PitcherProvider: React.FC<React.PropsWithChildren> = ({
     const fetchDataAndSubscribe = async () => {
       await Promise.allSettled([
         api
-          .getAppConfig({ app_name: 'salesforceadmin' })
-          .then((r) => setActionId(r.postcall_submit_actionid)),
+          .getAppConfig({ app_name: VITE_APP_NAME })
+          .then((r) => setEndpoint(r.postcall_submit_endpoint)),
         api.getEnv().then((env) => {
           const primaryColor = env?.pitcher?.instance?.color
 
@@ -56,9 +64,7 @@ export const PitcherProvider: React.FC<React.PropsWithChildren> = ({
 
           setEnv(env)
         }),
-        uiApi.setPostcallStyle({ height: 90 }),
         api.subscribe(),
-        uiApi.enablePostcallSubmit(),
       ])
 
       return uiApi.on(
@@ -76,7 +82,9 @@ export const PitcherProvider: React.FC<React.PropsWithChildren> = ({
   }, [])
 
   return (
-    <PitcherContext.Provider value={{ api, uiApi, actionId, env }}>
+    <PitcherContext.Provider
+      value={{ api: apiRef.current, uiApi: uiApiRef.current, env, endpoint }}
+    >
       {children}
     </PitcherContext.Provider>
   )

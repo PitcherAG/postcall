@@ -1,0 +1,18 @@
+{
+    "sections": [
+      {
+        "label": "Postcall configuration",
+        "fields": [
+          {
+            "type": "text",
+            "name": "postcall_submit_endpoint",
+            "label": "Postcall submit endpoint",
+            "help_text": "The endpoint to submit the postcall data to. This endpoint should be able to accept a POST request with a JSON body.",
+            "is_required": true,
+            "is_filterable": false
+          }
+        ]
+      }
+    ]
+  }
+  
