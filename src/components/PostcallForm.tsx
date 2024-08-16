@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import axios from 'axios'
 import * as z from 'zod'
-import { PitcherEventName } from '@pitcher/js-api'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
+import { usePitcher } from '@/components/providers/PitcherProvider'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -15,7 +15,6 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form'
-import { usePitcher } from './PitcherProvider'
 import { StarRating } from '@/components/ui/star-rating'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
 import { Input } from '@/components/ui/input'
@@ -37,7 +36,7 @@ const formSchema = z
   })
 
 export const PostcallForm: React.FC = () => {
-  const { api, uiApi, actionId } = usePitcher()
+  const { uiApi, endpoint, env } = usePitcher()
   const [showFollowUp, setShowFollowUp] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -55,66 +54,63 @@ export const PostcallForm: React.FC = () => {
 
   const onSubmit = useCallback(
     async (values: z.infer<typeof formSchema>) => {
-      return alert(JSON.stringify(values))
       try {
-        uiApi.disablePostcallSubmit()
-
-        const response = await axios.post(
-          'https://connect.pitcher.com/api/actions/execute',
-          {
-            actionId,
-            eventData: values,
-          },
-        )
-
-        if (
-          response.data.result &&
-          Array.isArray(response.data.result) &&
-          response.data.result.every((item: string) => item === 'OK')
-        ) {
-          console.log("Data.result is an array of 'OK' strings.")
-          uiApi.toast({
-            message: 'Postcall submitted.',
-            type: 'success',
-          })
-          uiApi.completePostcall({ was_successfully_submitted: true })
-        } else {
-          console.error("Data is not an array of 'OK' strings.")
-          uiApi.enablePostcallSubmit()
+        const accessToken = env?.pitcher.access_token
+        if (!endpoint || !accessToken) {
+          console.warn(
+            'No endpoint or access token found to submit form',
+            endpoint,
+            accessToken,
+          )
+          return
         }
+        await axios
+          .post(endpoint, values, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            withCredentials: true,
+          })
+          .then(({ data }) => alert(`From server ${JSON.stringify(data)}`))
+
+        uiApi.toast({
+          message: 'Postcall submitted.',
+          type: 'success',
+        })
+        uiApi.completePostcall({ was_successfully_submitted: true })
       } catch (error) {
         console.error('Error submitting form:', error)
-        uiApi.enablePostcallSubmit()
       }
     },
-    [uiApi, actionId],
+    [uiApi, endpoint, env],
   )
 
-  useEffect(() => {
-    const handleSubmit = () => {
-      form.handleSubmit(onSubmit)()
-    }
+  const cancelMeeting = () => {
+    if (window.confirm('Are you sure you want to cancel the meeting?'))
+      uiApi.cancelMeeting()
+  }
 
-    api.on(PitcherEventName.SUBMIT_POSTCALL_CLICKED, handleSubmit)
-
-    return () => {
-      api.off(PitcherEventName.SUBMIT_POSTCALL_CLICKED, handleSubmit)
-    }
-  }, [api, form, onSubmit])
+  const resumeMeeting = () => {
+    uiApi.resumeMeeting()
+  }
 
   return (
     <Form {...form}>
       <div className="sticky top-0 bg-background pb-3 justify-between flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
         <div className="flex gap-1">
-          <Button variant="destructive">Cancel meeting</Button>
-          <Button variant="outline">Return to meeting</Button>
+          <Button variant="destructive" onClick={cancelMeeting}>
+            Cancel meeting
+          </Button>
+          <Button variant="outline" onClick={resumeMeeting}>
+            Return to meeting
+          </Button>
         </div>
         <div className="flex gap-1">
-          <Button variant="outline">Save & submit later</Button>
           <Button onClick={form.handleSubmit(onSubmit)}>Submit</Button>
         </div>
       </div>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form className="space-y-8">
         <FormField
           control={form.control}
           name="meetingName"
