@@ -45,7 +45,6 @@ export const PitcherProvider: React.FC<React.PropsWithChildren> = ({
     const api = apiRef.current
     const uiApi = uiApiRef.current
     const handleMeetingCanceled = async (p: UiMeetingCanceledPayload) => {
-      console.log('Meeting canceled', p)
       uiApi.completePostcall({ was_successfully_submitted: false })
     }
 

@@ -19,6 +19,7 @@ import { StarRating } from '@/components/ui/star-rating'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import PresentationHistory from '@/components/PresentationHistory'
 
 const formSchema = z
   .object({
@@ -29,6 +30,13 @@ const formSchema = z
     meetingRating: z.number().min(1).max(5),
     scheduleFollowUp: z.boolean(),
     followUpDate: z.date().optional(),
+    presentedContent: z.array(
+      z.object({
+        type: z.enum(['canvas', 'section', 'file', 'page']),
+        id: z.string(),
+        rating: z.enum(['-1', '0', '1']).optional(),
+      }),
+    ),
   })
   .refine((data) => (data.scheduleFollowUp ? !!data.followUpDate : true), {
     message: 'Follow-up date is required when scheduling a follow-up',
@@ -97,126 +105,41 @@ export const PostcallForm: React.FC = () => {
 
   return (
     <Form {...form}>
-      <div className="sticky top-0 bg-background pb-3 justify-between flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-        <div className="flex gap-1">
-          <Button variant="destructive" onClick={cancelMeeting}>
-            Cancel meeting
-          </Button>
-          <Button variant="outline" onClick={resumeMeeting}>
-            Return to meeting
-          </Button>
+      <div>
+        <div className="sticky top-0 bg-background pb-3 justify-between flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 z-10">
+          <div className="flex gap-1">
+            <Button variant="destructive" onClick={cancelMeeting}>
+              Cancel meeting
+            </Button>
+            <Button variant="outline" onClick={resumeMeeting}>
+              Return to meeting
+            </Button>
+          </div>
+          <div className="flex gap-1">
+            <Button onClick={form.handleSubmit(onSubmit)}>Submit</Button>
+          </div>
         </div>
-        <div className="flex gap-1">
-          <Button onClick={form.handleSubmit(onSubmit)}>Submit</Button>
-        </div>
-      </div>
-      <form className="space-y-8">
-        <FormField
-          control={form.control}
-          name="meetingName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Meeting name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter meeting name..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+        <form className="space-y-8 pb-10">
           <FormField
             control={form.control}
-            name="meetingStart"
+            name="meetingName"
             render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>Start</FormLabel>
+              <FormItem>
+                <FormLabel>Meeting name</FormLabel>
                 <FormControl>
-                  <DateTimePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
+                  <Input placeholder="Enter meeting name..." {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="meetingEnd"
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>End</FormLabel>
-                <FormControl>
-                  <DateTimePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Enter meeting notes..."
-                  className="resize-none"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="meetingRating"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Rate the meeting</FormLabel>
-              <FormControl>
-                <StarRating
-                  rating={field.value}
-                  onRatingChange={field.onChange}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="scheduleFollowUp"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={(checked) => {
-                    field.onChange(checked)
-                    setShowFollowUp(checked)
-                  }}
-                />
-              </FormControl>
-              <FormLabel>Schedule follow-up meeting</FormLabel>
-            </FormItem>
-          )}
-        />
-        {showFollowUp && (
-          <FormField
-            control={form.control}
-            name="followUpDate"
-            render={({ field }) => (
-              <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-                <FormItem>
-                  <FormLabel>Follow-up meeting date</FormLabel>
+          <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+            <FormField
+              control={form.control}
+              name="meetingStart"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>Start</FormLabel>
                   <FormControl>
                     <DateTimePicker
                       value={field.value}
@@ -225,11 +148,111 @@ export const PostcallForm: React.FC = () => {
                   </FormControl>
                   <FormMessage />
                 </FormItem>
-              </div>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="meetingEnd"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>End</FormLabel>
+                  <FormControl>
+                    <DateTimePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Notes</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Enter meeting notes..."
+                    className="resize-none"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
           />
-        )}
-      </form>
+          <FormField
+            control={form.control}
+            name="presentedContent"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What was presented</FormLabel>
+                <FormControl>
+                  <PresentationHistory onChange={field.onChange} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="meetingRating"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rate the meeting</FormLabel>
+                <FormControl>
+                  <StarRating
+                    rating={field.value}
+                    onRatingChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="scheduleFollowUp"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked)
+                      setShowFollowUp(checked)
+                    }}
+                  />
+                </FormControl>
+                <FormLabel>Schedule follow-up meeting</FormLabel>
+              </FormItem>
+            )}
+          />
+          {showFollowUp && (
+            <FormField
+              control={form.control}
+              name="followUpDate"
+              render={({ field }) => (
+                <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+                  <FormItem>
+                    <FormLabel>Follow-up meeting date</FormLabel>
+                    <FormControl>
+                      <DateTimePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                </div>
+              )}
+            />
+          )}
+        </form>
+      </div>
     </Form>
   )
 }
