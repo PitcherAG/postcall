@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { usePitcher } from '@/components/providers/PitcherProvider'
-import { Textarea } from '@/components/ui/textarea'
+import { AiAssistedNotes } from '@/components/AiAssistedNotes'
+import { AiAssistant } from '@/components/AiAssistant'
 import { Switch } from '@/components/ui/switch'
 import {
   Form,
@@ -31,11 +32,13 @@ const formSchema = z
     scheduleFollowUp: z.boolean(),
     followUpDate: z.date().optional(),
     presentedContent: z.array(
-      z.object({
-        type: z.enum(['canvas', 'section', 'file', 'page']),
-        id: z.string(),
-        rating: z.enum(['-1', '0', '1']).optional(),
-      }),
+      z
+        .object({
+          type: z.enum(['canvas', 'section', 'file', 'page']),
+          id: z.string(),
+          rating: z.enum(['-1', '0', '1']).optional(),
+        })
+        .optional(),
     ),
   })
   .refine((data) => (data.scheduleFollowUp ? !!data.followUpDate : true), {
@@ -116,6 +119,7 @@ export const PostcallForm: React.FC = () => {
             </Button>
           </div>
           <div className="flex gap-1">
+            <AiAssistant />
             <Button onClick={form.handleSubmit(onSubmit)}>Submit</Button>
           </div>
         </div>
@@ -174,10 +178,9 @@ export const PostcallForm: React.FC = () => {
               <FormItem>
                 <FormLabel>Notes</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder="Enter meeting notes..."
-                    className="resize-none"
-                    {...field}
+                  <AiAssistedNotes
+                    onNotesGeneration={(notes) => form.setValue('notes', notes)}
+                    currentNotes={field.value ?? ''}
                   />
                 </FormControl>
                 <FormMessage />

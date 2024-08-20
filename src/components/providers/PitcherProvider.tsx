@@ -8,8 +8,6 @@ import React, {
 import {
   usePitcherApi as getApi,
   useUi as getUiApi,
-  UI_MESSAGE_TYPES,
-  UiMeetingCanceledPayload,
   type PitcherEnv,
 } from '@pitcher/js-api'
 
@@ -43,11 +41,6 @@ export const PitcherProvider: React.FC<React.PropsWithChildren> = ({
 
   useEffect(() => {
     const api = apiRef.current
-    const uiApi = uiApiRef.current
-    const handleMeetingCanceled = async (p: UiMeetingCanceledPayload) => {
-      uiApi.completePostcall({ was_successfully_submitted: false })
-    }
-
     const fetchDataAndSubscribe = async () => {
       await Promise.allSettled([
         api
@@ -65,17 +58,11 @@ export const PitcherProvider: React.FC<React.PropsWithChildren> = ({
         }),
         api.subscribe(),
       ])
-
-      return uiApi.on(
-        UI_MESSAGE_TYPES.UI_MEETING_CANCELED,
-        handleMeetingCanceled,
-      )
     }
 
-    const cleanup = fetchDataAndSubscribe()
+    fetchDataAndSubscribe()
 
     return () => {
-      cleanup.then((unsubscribe) => unsubscribe?.())
       api.unsubscribe()
     }
   }, [])

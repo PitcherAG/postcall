@@ -33,7 +33,6 @@ interface PresentationHistoryProps {
 }
 
 const PresentationHistory: React.FC<PresentationHistoryProps> = ({
-  value,
   onChange,
 }) => {
   const [presentationHistory, setPresentationHistory] = useState<
@@ -153,18 +152,24 @@ const PresentationHistory: React.FC<PresentationHistoryProps> = ({
 
   return (
     <div className="space-y-4">
-      {presentationHistory.map((item) => (
-        <div
-          key={item.id}
-          className="border rounded-sm shadow-sm overflow-hidden"
-        >
-          <HistoryItem
-            item={item}
-            updateRating={updateRating}
-            toggleItemEnabled={toggleItemEnabled}
-          />
-        </div>
-      ))}
+      {presentationHistory?.length ? (
+        presentationHistory.map((item) => (
+          <div
+            key={item.id}
+            className="border rounded-sm shadow-sm overflow-hidden"
+          >
+            <HistoryItem
+              item={item}
+              updateRating={updateRating}
+              toggleItemEnabled={toggleItemEnabled}
+            />
+          </div>
+        ))
+      ) : (
+        <span className="text-primary-3">
+          Nothing was presented. Maybe cancel or resume the call?
+        </span>
+      )}
     </div>
   )
 }
