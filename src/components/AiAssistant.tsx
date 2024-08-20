@@ -13,8 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 export const AiAssistant: React.FC = () => {
   const { toast } = useToast()
-  const { promptPia, response } = usePia()
-  const [isGenerating, setIsGenerating] = useState(false)
+  const { promptPia, response, isGenerating } = usePia()
   const [prompt, setPrompt] = useState('')
   const [generatedContent, setGeneratedContent] = useState('')
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
@@ -23,7 +22,6 @@ export const AiAssistant: React.FC = () => {
   useEffect(() => {
     if (response) {
       setGeneratedContent(response)
-      setIsGenerating(false)
     }
   }, [response])
 
@@ -31,7 +29,6 @@ export const AiAssistant: React.FC = () => {
     if (!prompt.trim()) return
 
     try {
-      setIsGenerating(true)
       setGeneratedContent('')
       const previousPrompts =
         promptHistory.length > 0
@@ -43,7 +40,6 @@ export const AiAssistant: React.FC = () => {
       setPrompt('')
     } catch (error) {
       console.error('Error prompting PIA:', error)
-      setIsGenerating(false)
     }
   }
 

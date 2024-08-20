@@ -11,6 +11,7 @@ let isListenerRegistered = false
 export function usePia() {
   const { uiApi } = usePitcher()
   const [response, setResponse] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
 
   useEffect(() => {
     if (!isListenerRegistered) {
@@ -33,13 +34,15 @@ export function usePia() {
       const id = Math.random().toString(36).slice(2, 9)
       subscribers.set(id, setResponse)
       try {
+        setIsGenerating(true)
         await uiApi.promptPia({ prompt, id })
       } finally {
         subscribers.delete(id)
+        setIsGenerating(false)
       }
     },
     [uiApi],
   )
 
-  return { promptPia, response }
+  return { promptPia, response, isGenerating }
 }

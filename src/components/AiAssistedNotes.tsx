@@ -12,18 +12,16 @@ export const AiAssistedNotes: React.FC<AiAssistedNotesProps> = ({
   onNotesGeneration,
   currentNotes,
 }) => {
-  const { promptPia, response } = usePia()
-  const [isGenerating, setIsGenerating] = useState(false)
+  const { promptPia, response, isGenerating } = usePia()
   const [notes, setNotes] = useState(currentNotes)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (response) {
+    if (response && isGenerating) {
       setNotes(response)
-      setIsGenerating(false)
       onNotesGeneration(response)
     }
-  }, [response, onNotesGeneration])
+  }, [response, onNotesGeneration, isGenerating])
 
   useEffect(() => {
     adjustTextareaHeight()
@@ -31,7 +29,6 @@ export const AiAssistedNotes: React.FC<AiAssistedNotesProps> = ({
 
   const handlePromptPia = async () => {
     try {
-      setIsGenerating(true)
       await promptPia(
         'Generate concise meeting notes for my call based on my call object: ' +
           localStorage.getItem('call') +
@@ -41,7 +38,6 @@ export const AiAssistedNotes: React.FC<AiAssistedNotesProps> = ({
       )
     } catch (error) {
       console.error('Error prompting PIA:', error)
-      setIsGenerating(false)
     }
   }
 
