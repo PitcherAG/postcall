@@ -47,7 +47,15 @@ export const PostcallForm: React.FC = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      meetingName: '',
+      meetingName: (() => {
+        try {
+          const callData = JSON.parse(localStorage.call)
+          return `Meeting with: ${callData.selectedAccount.Name}`
+        } catch (error) {
+          console.warn('Error parsing localStorage.call:', error)
+          return ''
+        }
+      })(),
       meetingStart: new Date(),
       meetingEnd: new Date(),
       notes: '',
@@ -264,12 +272,7 @@ export const PostcallForm: React.FC = () => {
               <FormItem>
                 <FormLabel>What was presented</FormLabel>
                 <FormControl>
-                  <PresentationHistory
-                    onChange={(...all) => {
-                      console.log('PresentationHistory value:', all)
-                      field.onChange(...all)
-                    }}
-                  />
+                  <PresentationHistory onChange={field.onChange} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
