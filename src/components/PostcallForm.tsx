@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import axios from 'axios'
 import * as z from 'zod'
 import { useForm } from 'react-hook-form'
@@ -31,15 +31,7 @@ const formSchema = z
     meetingRating: z.number().min(1).max(5),
     scheduleFollowUp: z.boolean(),
     followUpDate: z.date().optional(),
-    presentedContent: z.array(
-      z
-        .object({
-          type: z.enum(['canvas', 'section', 'file', 'page']),
-          id: z.string(),
-          rating: z.enum(['-1', '0', '1']).optional(),
-        })
-        .optional(),
-    ),
+    presentedContent: z.any().optional(),
   })
   .refine((data) => (data.scheduleFollowUp ? !!data.followUpDate : true), {
     message: 'Follow-up date is required when scheduling a follow-up',
@@ -47,8 +39,10 @@ const formSchema = z
   })
 
 export const PostcallForm: React.FC = () => {
-  const { uiApi, endpoint, env } = usePitcher()
+  const { uiApi, api: impactApi, endpoint, env } = usePitcher()
   const [showFollowUp, setShowFollowUp] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [actionId, setActionId] = useState('')
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,38 +57,101 @@ export const PostcallForm: React.FC = () => {
     },
   })
 
+  useEffect(() => {
+    const fetchAppConfig = async () => {
+      try {
+        const config = await impactApi.getAppConfig({
+          app_name: 'salesforceadmin',
+        })
+        setActionId(config?.postcall_submit_actionid || '')
+      } catch (error) {
+        console.error('Error fetching app config:', error)
+      }
+    }
+
+    fetchAppConfig()
+  }, [])
+
   const onSubmit = useCallback(
     async (values: z.infer<typeof formSchema>) => {
+      setIsSubmitting(true)
       try {
-        const accessToken = env?.pitcher.access_token
-        if (!endpoint || !accessToken) {
-          console.warn(
-            'No endpoint or access token found to submit form',
-            endpoint,
-            accessToken,
+        const connectedServices = env?.pitcher?.user?.connected_services
+        const sfdc = connectedServices?.[0]
+        const salesforceToken = sfdc?.access_token
+        const salesforceDomain = sfdc?.urls?.custom_domain
+        if (actionId && salesforceToken && salesforceDomain) {
+          let eventId = ''
+          let callObject = null
+
+          if (localStorage.call) {
+            try {
+              callObject = JSON.parse(localStorage.call)
+              eventId = callObject?.selectedEvent?.Id || ''
+            } catch (e) {
+              console.warn('Error getting eventId from call object:', e)
+            }
+          }
+          const eventData = {
+            salesforceToken,
+            salesforceDomain,
+            eventId,
+            callObject,
+            ...values,
+          }
+
+          const response = await axios.post(
+            'https://connect.pitcher.com/api/actions/execute',
+            {
+              actionId,
+              eventData,
+            },
           )
-          return
-        }
-        await axios
-          .post(endpoint, values, {
+
+          if (
+            response.data.result &&
+            Array.isArray(response.data.result) &&
+            response.data.result.every((item: string) => item === 'OK')
+          ) {
+            uiApi.toast({
+              message: 'Postcall submitted.',
+              type: 'success',
+            })
+            uiApi.completePostcall({ was_successfully_submitted: true })
+          } else {
+            throw new Error('Unexpected response from server')
+          }
+        } else {
+          // Fallback to current submit strategy
+          const accessToken = env?.pitcher.access_token
+          if (!endpoint || !accessToken) {
+            throw new Error('No endpoint or access token found to submit form')
+          }
+          await axios.post(endpoint, values, {
             headers: {
               Authorization: `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
             },
             withCredentials: true,
           })
-          .then(({ data }) => alert(`From server ${JSON.stringify(data)}`))
 
-        uiApi.toast({
-          message: 'Postcall submitted.',
-          type: 'success',
-        })
-        uiApi.completePostcall({ was_successfully_submitted: true })
+          uiApi.toast({
+            message: 'Postcall submitted.',
+            type: 'success',
+          })
+          uiApi.completePostcall({ was_successfully_submitted: true })
+        }
       } catch (error) {
         console.error('Error submitting form:', error)
+        uiApi.toast({
+          message: 'Error submitting postcall.',
+          type: 'error',
+        })
+      } finally {
+        setIsSubmitting(false)
       }
     },
-    [uiApi, endpoint, env],
+    [uiApi, endpoint, env, actionId],
   )
 
   const cancelMeeting = () => {
@@ -111,16 +168,29 @@ export const PostcallForm: React.FC = () => {
       <div>
         <div className="sticky top-0 bg-background pb-3 justify-between flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 z-10">
           <div className="flex gap-1">
-            <Button variant="destructive" onClick={cancelMeeting}>
+            <Button
+              variant="destructive"
+              disabled={isSubmitting}
+              onClick={cancelMeeting}
+            >
               Cancel meeting
             </Button>
-            <Button variant="outline" onClick={resumeMeeting}>
+            <Button
+              variant="outline"
+              disabled={isSubmitting}
+              onClick={resumeMeeting}
+            >
               Return to meeting
             </Button>
           </div>
           <div className="flex gap-1">
-            <AiAssistant />
-            <Button onClick={form.handleSubmit(onSubmit)}>Submit</Button>
+            <AiAssistant disabled={isSubmitting} />
+            <Button
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit'}
+            </Button>
           </div>
         </div>
         <form className="space-y-8 pb-10">
@@ -194,7 +264,12 @@ export const PostcallForm: React.FC = () => {
               <FormItem>
                 <FormLabel>What was presented</FormLabel>
                 <FormControl>
-                  <PresentationHistory onChange={field.onChange} />
+                  <PresentationHistory
+                    onChange={(...all) => {
+                      console.log('PresentationHistory value:', all)
+                      field.onChange(...all)
+                    }}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -105,7 +105,7 @@ const PresentationHistory: React.FC<PresentationHistoryProps> = ({
     }
 
     loadHistoryAndFetchThumbnails()
-  }, [api, onChange])
+  }, [])
 
   const deduplicateHistory = (
     history: PresentationHistoryItem[],

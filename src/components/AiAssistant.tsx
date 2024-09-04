@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
-export const AiAssistant: React.FC = () => {
+export const AiAssistant: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { toast } = useToast()
   const { promptPia, response, isGenerating } = usePia()
   const [prompt, setPrompt] = useState('')
@@ -67,7 +67,9 @@ export const AiAssistant: React.FC = () => {
   return (
     <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline">PIA Assistant</Button>
+        <Button variant="outline" disabled={disabled}>
+          PIA Assistant
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80">
         <div className="space-y-4">
