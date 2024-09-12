@@ -1,6 +1,6 @@
 # Postcall: Your IT's Swiss Army Knife for Rep Follow-Ups
 
-![Postcall Application](./assets/postcall.png)
+![Postcall Application](./src/assets/postcall.png)
 
 
 🛠️ Clone, Customize, Deploy: Empower your reps with tailor-made post-call tools.

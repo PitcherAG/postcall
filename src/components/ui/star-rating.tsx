@@ -1,6 +1,6 @@
 import React from 'react'
-import { Star } from 'lucide-react'
-
+import FaIcon from '@/components/ui/fa-icon'
+import { cn } from '@/util'
 interface StarRatingProps {
   rating: number
   onRatingChange: (rating: number) => void
@@ -13,11 +13,14 @@ export const StarRating: React.FC<StarRatingProps> = ({
   return (
     <div className="flex">
       {[1, 2, 3, 4, 5].map((star) => (
-        <Star
+        <FaIcon
           key={star}
-          className={`h-6 w-6 cursor-pointer ${
-            star <= rating ? 'text-primary fill-primary' : 'text-primary-5'
-          }`}
+          type={star <= rating ? 'fas' : 'far'}
+          icon="star"
+          className={cn(
+            'h-6 w-6 cursor-pointer',
+            star <= rating ? 'text-primary' : 'text-primary-5',
+          )}
           onClick={() => onRatingChange(star)}
         />
       ))}
