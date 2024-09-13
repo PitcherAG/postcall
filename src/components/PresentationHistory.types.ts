@@ -20,5 +20,7 @@ export type PresentationHistoryItem = CallPresentationHistory[number] & {
   pageIndex?: number
   thumbnail?: string
   enabled: boolean
+  content_type?: 'ar' | 'font' | 'image' | 'pdf' | 'video' | 'web'
+  file?: any
   pages?: PresentationHistoryItem[]
 }

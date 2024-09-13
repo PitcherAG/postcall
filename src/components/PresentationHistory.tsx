@@ -59,9 +59,10 @@ const PresentationHistory: FC<PresentationHistoryProps> = memo(
                 return {
                   ...item,
                   thumbnail: file?.thumbnail_url || undefined,
+                  content_type: file?.content_type,
                   pages: item.pages?.map((page) => ({
+                    file,
                     ...page,
-                    thumbnail: file?.thumbnail_url || undefined,
                   })),
                 }
               }
