@@ -1,263 +1,246 @@
-import React, { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { useEffect, useState, useCallback, memo, type FC } from 'react'
 import { usePitcher } from '@/components/providers/PitcherProvider'
 import { urlSafeFetchInChunks } from '@/util/network'
-import { Smile, Meh, Frown, Plus, Minus } from 'lucide-react'
-
-export type CallPresentationHistory = {
-  type: 'canvas' | 'section' | 'file' | 'page'
-  notesContent?: string
-  duration?: number
-  timeStarted?: string
-  name?: string
-  id: string
-}[]
-
-export type CallPresentationHistoryMetadata = {
-  [key: string]: {
-    rating: -1 | 0 | 1
-  }
-}
-
-export type PresentationHistoryItem = CallPresentationHistory[number] & {
-  rating?: -1 | 0 | 1
-  pageIndex?: number
-  thumbnail?: string
-  enabled: boolean
-}
+import HistoryItem from './PresentationHistoryItem'
+import {
+  CallPresentationHistory,
+  CallPresentationHistoryMetadata,
+  PresentationHistoryItem,
+} from './PresentationHistory.types'
 
 interface PresentationHistoryProps {
-  value?: PresentationHistoryItem[]
   onChange: (value: PresentationHistoryItem[]) => void
 }
 
-const PresentationHistory: React.FC<PresentationHistoryProps> = ({
-  onChange,
-}) => {
-  const [presentationHistory, setPresentationHistory] = useState<
-    PresentationHistoryItem[]
-  >([])
-  const { api } = usePitcher()
+const PresentationHistory: FC<PresentationHistoryProps> = memo(
+  ({ onChange }) => {
+    const [presentationHistory, setPresentationHistory] = useState<
+      PresentationHistoryItem[]
+    >([])
+    const { api } = usePitcher()
 
-  useEffect(() => {
-    const loadHistoryAndFetchThumbnails = async () => {
-      const callData = localStorage.getItem('call')
-      const call = callData ? JSON.parse(callData) : null
+    useEffect(() => {
+      const loadHistoryAndFetchThumbnails = async () => {
+        const callData = localStorage.getItem('call')
+        const call = callData ? JSON.parse(callData) : null
 
-      if (call) {
-        const history: CallPresentationHistory = call.presentationHistory || []
-        const metadata: CallPresentationHistoryMetadata =
-          call.presentationHistoryMetadata || {}
+        if (call) {
+          const history: CallPresentationHistory =
+            call.presentationHistory || []
+          const metadata: CallPresentationHistoryMetadata =
+            call.presentationHistoryMetadata || {}
 
-        const combinedHistory = history.map((item) => {
-          const [fileId, pageIndex] = item.id.split('/')
+          const organizedHistory = organizeHistory(history, metadata)
+
+          try {
+            const fileIds = [
+              ...new Set(
+                organizedHistory
+                  .filter((item) => item.type === 'file')
+                  .map((item) => item.id),
+              ),
+            ]
+
+            const filesResponse = (await urlSafeFetchInChunks(
+              fileIds,
+              (chunk) => api.getFiles?.({ id__in: chunk.join(',') }) as any,
+            )) as Awaited<ReturnType<typeof api.getFiles>>['results']
+
+            if (!filesResponse) {
+              throw new Error('No files found')
+            }
+            const filesMap = new Map(
+              filesResponse.map((file) => [file.id, file]),
+            )
+
+            const historyWithThumbnails = organizedHistory.map((item) => {
+              if (item.type === 'file') {
+                const file = filesMap.get(item.id)
+                return {
+                  ...item,
+                  thumbnail: file?.thumbnail_url || undefined,
+                  content_type: file?.content_type,
+                  pages: item.pages?.map((page) => ({
+                    file,
+                    ...page,
+                  })),
+                }
+              }
+              return item
+            })
+
+            setPresentationHistory(historyWithThumbnails)
+          } catch (error) {
+            console.error('Error fetching file thumbnails:', error)
+            setPresentationHistory(organizedHistory)
+          }
+        }
+      }
+
+      loadHistoryAndFetchThumbnails()
+    }, [])
+
+    useEffect(() => {
+      onChange(presentationHistory)
+    }, [presentationHistory, onChange])
+
+    const organizeHistory = useCallback(
+      (
+        history: CallPresentationHistory,
+        metadata: CallPresentationHistoryMetadata,
+      ) => {
+        const organizedHistory: PresentationHistoryItem[] = []
+        const fileMap = new Map<string, PresentationHistoryItem>()
+        const alreadyAddedItems = new Set<string>()
+
+        history.forEach((item) => {
           const metadataKey =
-            item.type === 'page' ? `${fileId}/${pageIndex}` : item.id
-          return {
-            ...item,
-            rating: metadata[metadataKey]?.rating,
-            pageIndex: pageIndex ? parseInt(pageIndex, 10) : undefined,
-            enabled: true,
+            item.type === 'page' ? `${item.id}/${item.page}` : item.id
+          const rating = metadata[metadataKey]?.rating
+
+          if (!alreadyAddedItems.has(metadataKey)) {
+            alreadyAddedItems.add(metadataKey)
+
+            if (item.type === 'file') {
+              if (!fileMap.has(item.id)) {
+                fileMap.set(item.id, {
+                  ...item,
+                  pages: [],
+                  rating,
+                  enabled: true,
+                })
+              }
+            } else if (item.type === 'page') {
+              const fileId = item.id
+              let file = fileMap.get(fileId)
+              if (!file) {
+                file = {
+                  id: fileId,
+                  type: 'file',
+                  name: item.name,
+                  pages: [],
+                  enabled: true,
+                }
+                fileMap.set(fileId, file)
+              }
+              const pageId = `${fileId}/${item.page}`
+              if (!file.pages!.some((p) => p.id === pageId)) {
+                file.pages!.push({
+                  ...item,
+                  id: pageId,
+                  pageIndex: item.page,
+                  rating,
+                  enabled: true,
+                })
+              }
+            } else {
+              organizedHistory.push({ ...item, rating, enabled: true })
+            }
           }
         })
 
-        const deduplicatedHistory = deduplicateHistory(combinedHistory)
+        // Add all files to organized history, regardless of whether they have pages
+        fileMap.forEach((file) => {
+          organizedHistory.push(file)
+        })
 
-        const fileIds = [
-          ...deduplicatedHistory.reduce((acc, item) => {
-            if (item.type === 'file' || item.type === 'page') {
-              const fileId = item.id.split('/')[0]
-              acc.add(fileId)
+        return organizedHistory
+      },
+      [],
+    )
+
+    const toggleItemEnabled = useCallback((id: string, pageIndex?: number) => {
+      setPresentationHistory((prevHistory) => {
+        const updatedHistory = prevHistory.map((item) => {
+          if (item.id === id) {
+            if (item.type === 'file' && item.pages) {
+              return {
+                ...item,
+                enabled: !item.enabled,
+                pages: item.pages.map((page) => ({
+                  ...page,
+                  enabled: !item.enabled,
+                })),
+              }
+            } else if (pageIndex !== undefined && item.pages) {
+              return {
+                ...item,
+                pages: item.pages.map((page) =>
+                  page.pageIndex === pageIndex
+                    ? { ...page, enabled: !page.enabled }
+                    : page,
+                ),
+              }
             }
-            return acc
-          }, new Set<string>()),
-        ]
-
-        try {
-          const filesResponse = (await urlSafeFetchInChunks(
-            fileIds,
-            (chunk) => api.getFiles?.({ id__in: chunk.join(',') }) as any,
-          )) as Awaited<ReturnType<typeof api.getFiles>>['results']
-
-          if (!filesResponse) {
-            throw new Error('No files found')
           }
-          const filesMap = new Map(filesResponse.map((file) => [file.id, file]))
+          return item
+        })
+        return updatedHistory
+      })
+    }, [])
 
-          const historyWithThumbnails = deduplicatedHistory.map((item) => {
-            const fileId = item.id.split('/')[0]
-            const file = filesMap.get(fileId)
-            return {
-              ...item,
-              thumbnail: file?.thumbnail_url || undefined,
+    const updateRating = useCallback(
+      (id: string, pageIndex: number | undefined, rating: -1 | 0 | 1) => {
+        setPresentationHistory((prevHistory) => {
+          const updatedHistory = prevHistory.map((item) => {
+            if (item.type === 'file' && item.pages) {
+              if (pageIndex !== undefined) {
+                return {
+                  ...item,
+                  pages: item.pages.map((page) =>
+                    page.id === id ? { ...page, rating } : page,
+                  ),
+                }
+              } else if (item.id === id) {
+                return { ...item, rating }
+              }
+            } else if (item.id === id) {
+              return { ...item, rating }
             }
+            return item
           })
+          return updatedHistory
+        })
 
-          setPresentationHistory(historyWithThumbnails)
-          onChange(historyWithThumbnails)
-        } catch (error) {
-          console.error('Error fetching file thumbnails:', error)
-          setPresentationHistory(deduplicatedHistory)
-          onChange(deduplicatedHistory)
+        // Update localStorage
+        const callData = localStorage.getItem('call')
+        if (callData) {
+          const call = JSON.parse(callData)
+          call.presentationHistoryMetadata = {
+            ...call.presentationHistoryMetadata,
+            [id]: { ...call.presentationHistoryMetadata?.[id], rating },
+          }
+          localStorage.setItem('call', JSON.stringify(call))
         }
-      }
-    }
-
-    loadHistoryAndFetchThumbnails()
-  }, [])
-
-  const deduplicateHistory = (
-    history: PresentationHistoryItem[],
-  ): PresentationHistoryItem[] => {
-    const uniqueMap = new Map<string, PresentationHistoryItem>()
-
-    history.forEach((item) => {
-      const key = `${item.id}${item.pageIndex !== undefined ? '/' + item.pageIndex : ''}`
-      if (
-        !uniqueMap.has(key) ||
-        (item.timeStarted &&
-          item.timeStarted > (uniqueMap.get(key)?.timeStarted ?? ''))
-      ) {
-        uniqueMap.set(key, item)
-      }
-    })
-
-    return Array.from(uniqueMap.values())
-  }
-
-  const toggleItemEnabled = (id: string, pageIndex?: number) => {
-    const updatedHistory = presentationHistory.map((item) =>
-      item.id === id && item.pageIndex === pageIndex
-        ? { ...item, enabled: !item.enabled }
-        : item,
+      },
+      [],
     )
-    setPresentationHistory(updatedHistory)
-    onChange(updatedHistory)
-  }
 
-  const updateRating = (
-    id: string,
-    pageIndex: number | undefined,
-    rating: -1 | 0 | 1,
-  ) => {
-    const updatedHistory = presentationHistory.map((item) =>
-      item.id === id && item.pageIndex === pageIndex
-        ? { ...item, rating }
-        : item,
+    return (
+      <div className="space-y-4">
+        {presentationHistory.length ? (
+          presentationHistory.map((item) => (
+            <div
+              key={item.id}
+              className="border rounded-sm shadow-sm overflow-hidden"
+            >
+              <HistoryItem
+                item={item}
+                updateRating={updateRating}
+                toggleItemEnabled={toggleItemEnabled}
+              />
+            </div>
+          ))
+        ) : (
+          <span className="text-primary-3">
+            Nothing was presented. Maybe cancel or resume the call?
+          </span>
+        )}
+      </div>
     )
-    setPresentationHistory(updatedHistory)
-    onChange(updatedHistory)
-  }
-
-  return (
-    <div className="space-y-4">
-      {presentationHistory?.length ? (
-        presentationHistory.map((item) => (
-          <div
-            key={item.id}
-            className="border rounded-sm shadow-sm overflow-hidden"
-          >
-            <HistoryItem
-              item={item}
-              updateRating={updateRating}
-              toggleItemEnabled={toggleItemEnabled}
-            />
-          </div>
-        ))
-      ) : (
-        <span className="text-primary-3">
-          Nothing was presented. Maybe cancel or resume the call?
-        </span>
-      )}
-    </div>
-  )
-}
-
-const HistoryItem: React.FC<{
-  item: PresentationHistoryItem
-  updateRating: (
-    id: string,
-    pageIndex: number | undefined,
-    rating: -1 | 0 | 1,
-  ) => void
-  toggleItemEnabled: (id: string, pageIndex?: number) => void
-}> = ({ item, updateRating, toggleItemEnabled }) => (
-  <div className="flex items-center space-x-4 p-4 bg-primary-6">
-    <div className={`flex-1 ${item.enabled ? '' : 'opacity-50'}`}>
-      {item.thumbnail && (
-        <img
-          src={item.thumbnail}
-          alt={item.name}
-          className="w-16 h-16 object-cover rounded"
-        />
-      )}
-      <h3 className="text-lg font-medium">
-        {item.name || `${item.type} item`}
-      </h3>
-      <p className="text-sm text-gray-500">Type: {item.type}</p>
-      {item.type === 'page' && item.pageIndex !== undefined && (
-        <p className="text-sm text-gray-500">Page: {item.pageIndex + 1}</p>
-      )}
-      <RatingBadges
-        item={item}
-        updateRating={updateRating}
-        disabled={!item.enabled}
-      />
-    </div>
-    <ToggleButton item={item} toggleItemEnabled={toggleItemEnabled} />
-  </div>
+  },
 )
 
-const RatingBadges: React.FC<{
-  item: PresentationHistoryItem
-  updateRating: (
-    id: string,
-    pageIndex: number | undefined,
-    rating: -1 | 0 | 1,
-  ) => void
-  disabled: boolean
-}> = ({ item, updateRating, disabled }) => (
-  <div className="flex space-x-2 mt-2">
-    <Badge
-      className={`p-1 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-      variant={item.rating === -1 ? 'destructive' : 'outline'}
-      onClick={() => !disabled && updateRating(item.id, item.pageIndex, -1)}
-    >
-      <Frown size={28} />
-    </Badge>
-    <Badge
-      className={`p-1 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-      variant={item.rating === 0 ? 'secondary' : 'outline'}
-      onClick={() => !disabled && updateRating(item.id, item.pageIndex, 0)}
-    >
-      <Meh size={28} />
-    </Badge>
-    <Badge
-      className={`p-1 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-      variant={item.rating === 1 ? 'default' : 'outline'}
-      onClick={() => !disabled && updateRating(item.id, item.pageIndex, 1)}
-    >
-      <Smile size={28} />
-    </Badge>
-  </div>
-)
-
-const ToggleButton: React.FC<{
-  item: PresentationHistoryItem
-  toggleItemEnabled: (id: string, pageIndex?: number) => void
-}> = ({ item, toggleItemEnabled }) => (
-  <Button
-    variant={item.enabled ? 'outline' : 'default'}
-    className="rounded-full"
-    size="icon"
-    onClick={(e) => {
-      e.preventDefault()
-      toggleItemEnabled(item.id, item.pageIndex)
-    }}
-  >
-    {item.enabled ? <Minus size={20} /> : <Plus size={20} />}
-  </Button>
-)
+PresentationHistory.displayName = 'PresentationHistory'
 
 export default PresentationHistory

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { pick } from 'lodash-es'
+
 import { usePia } from '@/hooks/usePia'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -29,9 +31,18 @@ export const AiAssistedNotes: React.FC<AiAssistedNotesProps> = ({
 
   const handlePromptPia = async () => {
     try {
+      const call = JSON.parse(localStorage.getItem('call') || '{}')
+      const callCtx = pick(call, [
+        'selectedAccount',
+        'eventDate',
+        'selectedCanvas',
+        'selectedContacts',
+        'selectedEvent',
+        'selectedUsers',
+      ])
       await promptPia(
         'Generate concise meeting notes for my call based on my call object: ' +
-          localStorage.getItem('call') +
+          JSON.stringify(callCtx) +
           ' and my saved notes: ' +
           localStorage.getItem('notes_app_content') +
           '. Make sure to REMOVE any irrelevant properties. Calculate and include the call duration in a human-readable form (e.g., "30 minutes", "1 hour 15 minutes") using the call.eventDate object.',

@@ -251,6 +251,19 @@ export const PostcallForm: React.FC = () => {
           </div>
           <FormField
             control={form.control}
+            name="presentedContent"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What was presented</FormLabel>
+                <FormControl>
+                  <PresentationHistory onChange={field.onChange} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
             name="notes"
             render={({ field }) => (
               <FormItem>
@@ -265,19 +278,7 @@ export const PostcallForm: React.FC = () => {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="presentedContent"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>What was presented</FormLabel>
-                <FormControl>
-                  <PresentationHistory onChange={field.onChange} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+
           <FormField
             control={form.control}
             name="meetingRating"
