@@ -51,14 +51,14 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            variant={'outline'}
+            variant={'form'}
             className={cn(
-              'w-[280px] justify-start text-left font-normal',
+              'w-[280px] justify-start text-left font-normal px-2',
               !date && 'text-muted-foreground',
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
             {date ? format(date, 'PPP') : <span>Pick a date</span>}
+            <CalendarIcon className="ml-auto h-4 w-4" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">

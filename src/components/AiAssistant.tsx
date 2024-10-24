@@ -67,7 +67,7 @@ export const AiAssistant: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   return (
     <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" disabled={disabled}>
+        <Button variant="secondary" disabled={disabled}>
           PIA Assistant
         </Button>
       </PopoverTrigger>

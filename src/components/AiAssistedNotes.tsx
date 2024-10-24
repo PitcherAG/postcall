@@ -78,7 +78,7 @@ export const AiAssistedNotes: React.FC<AiAssistedNotesProps> = ({
       <Button
         onClick={handlePromptPia}
         disabled={isGenerating}
-        variant="outline"
+        variant="secondary"
         className="absolute top-2 right-2"
       >
         {isGenerating ? 'Generating..' : 'PIA Autofill'}
