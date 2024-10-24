@@ -5,7 +5,8 @@
     "dev": "vite --port 5193",
     "build": "tsc -b && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,scss,json}\""
   },
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.6.0",

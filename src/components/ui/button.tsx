@@ -19,7 +19,7 @@ const buttonVariants = cva(
           'bg-primary6 text-primary6-foreground uppercase hover:bg-primary5',
         ghost: 'hover:bg-primary6 hover:text-1 uppercase',
         link: 'text-primary underline-offset-4 hover:underline',
-        form:'border border-input bg-background',
+        form: 'border border-input bg-background',
       },
       size: {
         default: 'h-9 px-4 py-2',
