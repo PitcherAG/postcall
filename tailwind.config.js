@@ -1,3 +1,5 @@
+const { subtle } = require('crypto');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ['class'],
@@ -40,6 +42,14 @@ module.exports = {
         destructive: {
           DEFAULT: 'var(--destructive)',
           foreground: 'var(--destructive-foreground)',
+        },
+        primary6: {
+          DEFAULT: 'var(--primary6)',
+          foreground: 'var(--primary6-foreground)',
+        },
+        primary5: {
+          DEFAULT: 'var(--primary5)',
+          foreground: 'var(--primary5-foreground)',
         },
         muted: {
           DEFAULT: 'var(--muted)',

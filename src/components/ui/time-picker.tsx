@@ -23,9 +23,9 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline">{value || '07:00'}</Button>
+        <Button variant="form">{value || '07:00'}</Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80">
+      <PopoverContent className="w-auto">
         <div className="flex space-x-2">
           <ScrollArea className="h-72 w-16">
             {hours.map((hour) => (
